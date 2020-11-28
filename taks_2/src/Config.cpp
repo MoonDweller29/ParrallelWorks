@@ -25,12 +25,15 @@ void Config::readConfig(const char *config_path) {
     N[1] = reader.GetInteger("Grid", "Ny",  -1);
     N[2] = reader.GetInteger("Grid", "Nz",  -1);
     K = reader.GetInteger("Grid", "K",  -1);
+    T = reader.GetReal("Grid", "T", -1);
+
 
     for (int i = 0; i < 3; ++i) {
     	h[i] = L[i]/N[i];
     }
 
-    tau = h[0]*h[0]; //heuristics
+    // tau = h[0]*h[0]; //heuristics
+    tau = T/K;
 }
 
 void Config::print() const {
@@ -43,5 +46,6 @@ void Config::print() const {
 		"Ny  = "<< N[1] << std::endl<<
 		"Nz  = "<< N[2] << std::endl<<
 		"K   = "<< K    << std::endl<<
+		"T   = "<< T    << std::endl<<
 		"tau = "<< tau  << std::endl;
 }

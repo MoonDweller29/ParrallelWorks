@@ -3,6 +3,8 @@
 #include "mpi.h"
 #include <iostream>
 #include <vector>
+#include <math.h>
+
 
 static std::vector<int> prime_divisors(int x) {
 	std::vector<int> divs;
@@ -60,6 +62,16 @@ Solver::Solver(const Config &config, int argc, char **argv) :
 			"blockShape: "<<Nsize[0]<<","<<Nsize[1]<<","<<Nsize[2]<< std::endl;
 	}
 
+	double max = rank+0.5;
+	if (rank == _root)
+		max = 0;
+	double out_max;
+
+	MPI_Reduce(&max, &out_max, 1, MPI_DOUBLE, MPI_MAX, _root, MPI_COMM_WORLD);
+	if (rank == _root){
+		std::cout << "MAX = " << out_max << std::endl;
+	}
+
 	// MPI_Barrier(MPI_COMM_WORLD);
 	// std::cout << rank <<": "<< 
 	// 	coord[0]<<","<<coord[1]<<","<<coord[2] <<
@@ -82,10 +94,32 @@ void Solver::fillU0(Mat3D &block, const IFunction3D &phi) {
 }
 
 
+void Solver::printErr(Mat3D &block, const IFunction4D &u, double t) {
+	double err_max = -1;
+	for (int i = 0; i < Nsize[0]; ++i) {
+		for (int j = 0; j < Nsize[1]; ++j) {
+			for (int k = 0; k < Nsize[2]; ++k) {
+				err_max = std::max(err_max, abs(
+					u((i+Nmin[0])*h[0], (j+Nmin[1])*h[1], (k+Nmin[2])*h[2], t) - block(i,j,k)
+				));
+			}
+		}
+	}
+
+	double out_max;
+	MPI_Reduce(&err_max, &out_max, 1, MPI_DOUBLE, MPI_MAX, _root, MPI_COMM_WORLD);
+	if (rank == _root) {
+		std::cout <<"t = "<<t<<", max_err = "<<out_max<<std::endl;	
+	}
+}
+
+
+
 void Solver::run(int K) {
 	this->K = K;
 
 	fillU0(*blocks[0], phi);
+	printErr(*blocks[0], u, 0);
 }
 
 

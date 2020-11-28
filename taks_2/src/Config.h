@@ -7,6 +7,7 @@ public:
 	double h[3];
 	bool periodic[3];
 	int K;
+	double T;
 	double tau; 
 
 	Config(const char* config_path);

@@ -16,6 +16,7 @@ public:
 	void setZeroSlice(int ind, int axis);
 
 	void print(bool padded = false) const;
+	void saveToCSV(const char* filename) const;
 	void save(const char* filename) const;
 
 private:

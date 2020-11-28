@@ -112,7 +112,6 @@ void Mat3D::setZeroSlice(int ind, int axis) {
 }
 
 
-
 void Mat3D::print(bool padded) const {
 	int pad = 0;
 	int I = _I;
@@ -145,7 +144,7 @@ void Mat3D::print(bool padded) const {
 
 }
 
-void Mat3D::save(const char* filename) const {
+void Mat3D::saveToCSV(const char* filename) const {
 	std::ofstream out_file;
 	out_file.open(filename);
 	if (!out_file) {
@@ -165,4 +164,14 @@ void Mat3D::save(const char* filename) const {
 		}
 	}
 
+}
+
+void Mat3D::save(const char* filename) const {
+	std::ofstream out_file;
+	out_file.open(filename, std::ios::out | std::ios::binary);
+	if (!out_file) {
+		std::cerr << "can't open file " << filename << std::endl;
+		return;
+	}
+	out_file.write((char *) _data.data(), _data.size()*sizeof(double));
 }

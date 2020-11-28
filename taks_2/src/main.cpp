@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 
 	Config conf(argv[1]);
 	Solver solver(conf, argc, argv);
-
+	solver.run(conf.K);
 
 	// std::vector<int> divs = prime_divisors(atoi(argv[1]));
 	// for (int i = 0; i < divs.size(); ++i)

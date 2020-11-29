@@ -29,6 +29,9 @@ static std::vector<int> prime_divisors(int x) {
 static int mod(int x, int div) {
     return ((x%div)+div)%div;
 }
+static int up_div(int x, int div) {
+    return (x+div-1)/div;
+}
 
 
 Solver::Solver(const Config &config, int argc, char **argv) :
@@ -53,17 +56,20 @@ Solver::Solver(const Config &config, int argc, char **argv) :
 
     calcProcGrid();
     idToCoord(rank, _coord);
-    for (int i = 0; i < 3; ++i) {
-        Nsize[i] = N[i] / procShape[i];
-        Nmin[i] = Nsize[i]*_coord[i];
-    }
+    calcBlockSize();
+
+    
     if (rank == _root) {
         config.print();
         std::cout << "MPI INFO\n" <<
             "num processes: " << procCount << std::endl <<
             "procShape: "<<procShape[0]<<","<<procShape[1]<<","<<procShape[2]<< std::endl<<
+            // "BasicNsize: "<<BasicNsize[0]<<","<<BasicNsize[1]<<","<<BasicNsize[2]<< std::endl<<
             "blockShape: "<<Nsize[0]<<","<<Nsize[1]<<","<<Nsize[2]<< std::endl;
     }
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // std::cout << "ID:" << rank <<": "
+    //     "blockShape: "<<Nsize[0]<<","<<Nsize[1]<<","<<Nsize[2]<< std::endl;
 
     clearRequests();
 
@@ -84,6 +90,21 @@ Solver::Solver(const Config &config, int argc, char **argv) :
 
     initTags();
     allocBlocks();
+}
+
+
+void Solver::calcBlockSize() {
+    for (int i = 0; i < 3; ++i) {
+        BasicNsize[i] = up_div(N[i], procShape[i]);
+        Nmin[i] = BasicNsize[i]*_coord[i];
+        Nsize[i] = BasicNsize[i];
+        if (_coord[i] == procShape[i] -1) {
+            Nsize[i] = N[i]%BasicNsize[i];
+            if (Nsize[i] == 0) {
+                Nsize[i] = BasicNsize[i];
+            }
+        }
+    }
 }
 
 void Solver::clearRequests() {

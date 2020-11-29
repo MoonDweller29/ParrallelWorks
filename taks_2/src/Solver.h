@@ -16,7 +16,7 @@ public:
 
 private:
 	double L[3];
-	int N[3];
+	int N[3]; //grid size
 	double h[3];
 	bool periodic[3];
 	int K;
@@ -25,6 +25,7 @@ private:
 	int procShape[3]; //grid of processes
 	int _coord[3]; //coord of curr process in process grid
 	int Nmin[3]; //start index in main grid for process
+	int BasicNsize[3]; //size of main part of blocks
 	int Nsize[3]; //size of block for process
 
 	int sender_tags[3][2]; //dims * both sides
@@ -39,6 +40,7 @@ private:
 
 	Mat3D *blocks[3];
 	std::vector<double> slices[3][2];
+	void calcBlockSize();
 	void allocBlocks();
 	void freeBlocks();
 	void rotateBlocks();

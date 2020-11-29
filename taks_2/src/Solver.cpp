@@ -114,12 +114,37 @@ void Solver::printErr(Mat3D &block, const IFunction4D &u, double t) {
 }
 
 
+double Solver::laplacian(const Mat3D &block, int i, int j, int k) const {
+	double res = 0;
+	res += (block(i-1,j,k) - 2*block(i,j,k) + block(i+1,j,k)) / (h[0]*h[0]);
+	res += (block(i,j-1,k) - 2*block(i,j,k) + block(i,j+1,k)) / (h[1]*h[1]);
+	res += (block(i,j,k-1) - 2*block(i,j,k) + block(i,j,k+1)) / (h[2]*h[2]);
+
+	return res;
+}
+
+
+void Solver::fillU1(const Mat3D &block0, Mat3D &block1) {
+	
+	for (int i = 0; i < Nsize[0]; ++i) {
+		for (int j = 0; j < Nsize[1]; ++j) {
+			for (int k = 0; k < Nsize[2]; ++k) {
+				block1(i,j,k) = block0(i,j,k) + tau*tau*0.5*laplacian(block0, i,j,k);
+			}
+		}
+	}
+}
+
+
 
 void Solver::run(int K) {
 	this->K = K;
 
-	fillU0(*blocks[0], phi);
-	printErr(*blocks[0], u, 0);
+	fillU0(*(blocks[0]), phi);
+	printErr(*(blocks[0]), u, 0);
+	fillU1(*(blocks[0]), *(blocks[1]));
+	printErr(*(blocks[1]), u, tau);
+
 }
 
 

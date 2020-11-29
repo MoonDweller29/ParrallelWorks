@@ -40,6 +40,9 @@ private:
 
 	void fillU0(Mat3D &block, const IFunction3D &phi);
 	void printErr(Mat3D &block, const IFunction4D &u, double t);
+	double laplacian(const Mat3D &block, int i, int j, int k) const;
+	void fillU1(const Mat3D &block0, Mat3D &block1);
+
 
 	void calcProcGrid();
 	int procId(int coord[]);

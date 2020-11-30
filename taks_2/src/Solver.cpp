@@ -4,7 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include <math.h>
+#include <cmath>
 
 
 static std::vector<int> prime_divisors(int x) {
@@ -243,7 +243,7 @@ void Solver::printErr(Mat3D &block, const IFunction4D &u, double t) {
     for (int i = 0; i < Nsize[0]; ++i) {
         for (int j = 0; j < Nsize[1]; ++j) {
             for (int k = 0; k < Nsize[2]; ++k) {
-                double curr_err = abs(
+                double curr_err = std::abs(
                     u((i+Nmin[0])*h[0], (j+Nmin[1])*h[1], (k+Nmin[2])*h[2], t) - block(i,j,k)
                 );
                 if (curr_err > err_max) {
@@ -305,7 +305,7 @@ void Solver::run(int K) {
     updateBorders(*(blocks[1]));
     printErr(*(blocks[1]), u, tau);
 
-    for (int n = 2; n < K; ++n) {
+    for (int n = 2; n <= K; ++n) {
         step(*(blocks[0]), *(blocks[1]), *(blocks[2]));
         updateBorders(*(blocks[2]));
         printErr(*(blocks[2]), u, tau*n);
@@ -349,7 +349,7 @@ void Solver::calcProcGrid() {
     for (int i = 0; i < divs_len; ++i)
     {
         procShape[dim] *= divs[i];
-        ++dim;
+        dim = (dim+1)%3;
     }
 }
 

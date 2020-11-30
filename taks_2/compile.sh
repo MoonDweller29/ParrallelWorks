@@ -1,4 +1,4 @@
-mpic++ -Wall -std=c++98 -O0 \
+mpic++ -fopenmp -Wall -std=c++98 -O0 \
 	src/main.cpp \
 	src/Mat3D.cpp \
 	src/Config.cpp \

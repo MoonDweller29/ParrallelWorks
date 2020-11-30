@@ -1,6 +1,8 @@
+#include "omp.h"
 #include "Solver.h"
 #include "INIReader.h"
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <math.h>
 
@@ -222,6 +224,7 @@ void Solver::updateBorders(Mat3D& block) {
 
 
 void Solver::fillU0(Mat3D &block, const IFunction3D &phi) {
+    #pragma omp parallel for
     for (int i = -1; i <= Nsize[0]; ++i) {
         for (int j = -1; j <= Nsize[1]; ++j) {
             for (int k = -1; k <= Nsize[2]; ++k) {
@@ -236,12 +239,16 @@ void Solver::fillU0(Mat3D &block, const IFunction3D &phi) {
 
 void Solver::printErr(Mat3D &block, const IFunction4D &u, double t) {
     double err_max = -1;
+    #pragma omp parallel for reduction(max : err_max)
     for (int i = 0; i < Nsize[0]; ++i) {
         for (int j = 0; j < Nsize[1]; ++j) {
             for (int k = 0; k < Nsize[2]; ++k) {
-                err_max = std::max(err_max, abs(
+                double curr_err = abs(
                     u((i+Nmin[0])*h[0], (j+Nmin[1])*h[1], (k+Nmin[2])*h[2], t) - block(i,j,k)
-                ));
+                );
+                if (curr_err > err_max) {
+                    err_max = curr_err;
+                }
             }
         }
     }
@@ -265,7 +272,7 @@ double Solver::laplacian(const Mat3D &block, int i, int j, int k) const {
 
 
 void Solver::fillU1(const Mat3D &block0, Mat3D &block1) {
-    
+    #pragma omp parallel for
     for (int i = 0; i < Nsize[0]; ++i) {
         for (int j = 0; j < Nsize[1]; ++j) {
             for (int k = 0; k < Nsize[2]; ++k) {
@@ -277,6 +284,7 @@ void Solver::fillU1(const Mat3D &block0, Mat3D &block1) {
 
 
 void Solver::step(const Mat3D &block0, const Mat3D &block1, Mat3D &block2) {
+    #pragma omp parallel for
     for (int i = 0; i < Nsize[0]; ++i) {
         for (int j = 0; j < Nsize[1]; ++j) {
             for (int k = 0; k < Nsize[2]; ++k) {
@@ -304,6 +312,9 @@ void Solver::run(int K) {
         rotateBlocks();
     }
 
+    // std::stringstream s;
+    // s << "res/"<<_coord[0]<<"_"<<_coord[1]<<"_"<<_coord[2]<<".mat";
+    // blocks[1]->save(s.str().c_str());
 }
 
 

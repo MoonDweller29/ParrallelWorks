@@ -2,10 +2,21 @@
 #include "Solver.h"
 #include "INIReader.h"
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <vector>
 #include <cmath>
 
+
+static void dump_vector(const std::vector<double> &v, const char* filename) {
+    std::ofstream out_file;
+    out_file.open(filename, std::ios::out | std::ios::binary);
+    if (!out_file) {
+        std::cerr << "can't open file " << filename << std::endl;
+        return;
+    }
+    out_file.write((char *) v.data(), v.size()*sizeof(double));
+}
 
 static std::vector<int> prime_divisors(int x) {
     std::vector<int> divs;
@@ -152,6 +163,7 @@ void Solver::sendBorders(Mat3D& block) {
         
         if (_coord[axis] == 0 && !periodic[axis]) {
             block.setZeroSlice(-1, axis);
+            block.setZeroSlice(0, axis);
         } else {
             slices[axis][0] = block.slice(0, axis);
             int recv_coord[3] = {_coord[0], _coord[1], _coord[2]};
@@ -256,7 +268,8 @@ void Solver::printErr(Mat3D &block, const IFunction4D &u, double t) {
     double out_max;
     MPI_Reduce(&err_max, &out_max, 1, MPI_DOUBLE, MPI_MAX, _root, MPI_COMM_WORLD);
     if (rank == _root) {
-        std::cout <<"t = "<<t<<", max_err = "<<out_max<<std::endl;  
+        std::cout <<"t = "<<t<<", max_err = "<<out_max<<std::endl;
+        errors.push_back(out_max);  
     }
 }
 
@@ -312,9 +325,14 @@ void Solver::run(int K) {
         rotateBlocks();
     }
 
-    // std::stringstream s;
-    // s << "res/"<<_coord[0]<<"_"<<_coord[1]<<"_"<<_coord[2]<<".mat";
-    // blocks[1]->save(s.str().c_str());
+    std::stringstream s;
+    s << "res/"<<_coord[0]<<"_"<<_coord[1]<<"_"<<_coord[2]<<".mat";
+    blocks[1]->save(s.str().c_str());
+    if (rank == _root) {
+        std::stringstream s_e;
+        s_e << N[0] << ".vec";
+        dump_vector(errors, s_e.str().c_str());
+    }
 }
 
 

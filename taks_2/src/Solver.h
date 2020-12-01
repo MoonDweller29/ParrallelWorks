@@ -40,6 +40,7 @@ private:
 
 	Mat3D *blocks[3];
 	std::vector<double> slices[3][2];
+	std::vector<double> errors;
 	void calcBlockSize();
 	void allocBlocks();
 	void freeBlocks();

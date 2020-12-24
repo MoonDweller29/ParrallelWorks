@@ -1,0 +1,1 @@
+nvcc -ccbin mpicxx main.cu -o main

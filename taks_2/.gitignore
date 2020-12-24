@@ -1,3 +1,5 @@
 .ipynb_checkpoints
 imgs/*
 res/*
+configs/*
+*.vec

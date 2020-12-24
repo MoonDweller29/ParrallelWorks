@@ -11,6 +11,20 @@ private:
 	float* v = NULL;
 };
 
+class HostVec {
+public:
+	HostVec();
+	~HostVec();
+
+	cudaError_t malloc(size_t size, bool locked = false);
+	float *data() const { return v; }
+	float &operator[](int i);
+
+private:
+	float* v = NULL;
+	size_t _size = 0;
+	bool _locked = false;
+};
 
 // class PinnedVec {
 // public:

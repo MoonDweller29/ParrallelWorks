@@ -1,12 +1,15 @@
 #pragma once
 #include <cuda.h>
 
+class Event;
+
 class Stream {
 public:
 	Stream();
 	~Stream();
 
-	cudaStream_t operator*() { return stream; }
+	cudaStream_t operator*() const { return stream; }
+	cudaError_t wait(const Event& event) const; 
 private:
 	cudaStream_t stream;
 };

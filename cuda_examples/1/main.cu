@@ -2,6 +2,7 @@
 #include <vector>
 #include <cuda.h>
 #include "cuda_macro.h"
+#include "Event.h"
 
 // gridDim.x - grid size x
 // index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -19,6 +20,8 @@ __global__ void addVector(float* left, float* right, float* result)
 
 int main(int argc, char const *argv[])
 {
+    Event syncEvent;
+
     //Выделяем память под вектора
     const int SIZE = 512;
     float* vec1 = new float[SIZE];
@@ -28,8 +31,8 @@ int main(int argc, char const *argv[])
     //Инициализируем значения векторов
     for (int i = 0; i < SIZE; i++)
     {
-        vec1[i] = i;
-        vec2[i] = i;
+        vec1[i] = 1;
+        vec2[i] = 1;
     }
 
     //Указатели на память видеокарты
@@ -55,11 +58,8 @@ int main(int argc, char const *argv[])
     // addVector<<<1, SIZE>>>(devVec1, devVec2, devVec3);
 
     //Хендл event'а
-    cudaEvent_t syncEvent;
-
-    cudaEventCreate(&syncEvent);    //Создаем event
-    cudaEventRecord(syncEvent, 0);  //Записываем event
-    cudaEventSynchronize(syncEvent);  //Синхронизируем event
+    syncEvent.record(); //Записываем event
+    Event::wait(syncEvent); //Синхронизируем event
 
     //Только теперь получаем результат расчета
     SAFE_CALL( cudaMemcpy(vec3, devVec3, sizeof(float) * SIZE, cudaMemcpyDeviceToHost) )
@@ -68,8 +68,6 @@ int main(int argc, char const *argv[])
     {
         std::cout<< i <<" : "<< vec3[i] << std::endl;
     }
-
-    cudaEventDestroy(syncEvent);
 
     cudaFree(devVec1);
     cudaFree(devVec2);

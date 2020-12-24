@@ -1,1 +1,1 @@
-nvcc -ccbin mpic++ main.cu -o main
+nvcc -ccbin mpic++ main.cu Event.cu -o main

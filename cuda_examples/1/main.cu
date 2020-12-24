@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cuda.h>
+#include "cuda_macro.h"
 
 // gridDim.x - grid size x
 // index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -37,19 +38,20 @@ int main(int argc, char const *argv[])
     float* devVec3;
 
     //Выделяем память для векторов на видеокарте
-    cudaMalloc((void**)&devVec1, sizeof(float) * SIZE);
-    cudaMalloc((void**)&devVec2, sizeof(float) * SIZE);
-    cudaMalloc((void**)&devVec3, sizeof(float) * SIZE);
+    SAFE_CALL( cudaMalloc((void**)&devVec1, sizeof(float) * SIZE) )
+    SAFE_CALL( cudaMalloc((void**)&devVec2, sizeof(float) * SIZE) )
+    SAFE_CALL( cudaMalloc((void**)&devVec3, sizeof(float) * SIZE) )
 
     //Копируем данные в память видеокарты
-    cudaMemcpy(devVec1, vec1, sizeof(float) * SIZE, cudaMemcpyHostToDevice);
-    cudaMemcpy(devVec2, vec2, sizeof(float) * SIZE, cudaMemcpyHostToDevice);
+    SAFE_CALL( cudaMemcpy(devVec1, vec1, sizeof(float) * SIZE, cudaMemcpyHostToDevice) )
+    SAFE_CALL( cudaMemcpy(devVec2, vec2, sizeof(float) * SIZE, cudaMemcpyHostToDevice) )
     
     dim3 gridSize = dim3(1, 1, 1);    //Размер используемого грида
     dim3 blockSize = dim3(SIZE, 1, 1); //Размер используемого блока
 
     //Выполняем вызов функции ядра
     addVector<<<gridSize, blockSize>>>(devVec1, devVec2, devVec3);
+    checkErr();
     // addVector<<<1, SIZE>>>(devVec1, devVec2, devVec3);
 
     //Хендл event'а
@@ -60,7 +62,7 @@ int main(int argc, char const *argv[])
     cudaEventSynchronize(syncEvent);  //Синхронизируем event
 
     //Только теперь получаем результат расчета
-    cudaMemcpy(vec3, devVec3, sizeof(float) * SIZE, cudaMemcpyDeviceToHost);
+    SAFE_CALL( cudaMemcpy(vec3, devVec3, sizeof(float) * SIZE, cudaMemcpyDeviceToHost) )
 
     for (int i = 0; i < SIZE; i++)
     {

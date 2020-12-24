@@ -3,6 +3,7 @@
 #include <cuda.h>
 #include "cuda_macro.h"
 #include "Event.h"
+#include "Stream.h"
 
 // gridDim.x - grid size x
 // index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -20,7 +21,9 @@ __global__ void addVector(float* left, float* right, float* result)
 
 int main(int argc, char const *argv[])
 {
+    Event startEvent;
     Event syncEvent;
+    Stream stream1, stream2;
 
     //Выделяем память под вектора
     const int SIZE = 512;
@@ -52,14 +55,17 @@ int main(int argc, char const *argv[])
     dim3 gridSize = dim3(1, 1, 1);    //Размер используемого грида
     dim3 blockSize = dim3(SIZE, 1, 1); //Размер используемого блока
 
+    startEvent.record(*stream1);
+
     //Выполняем вызов функции ядра
-    addVector<<<gridSize, blockSize>>>(devVec1, devVec2, devVec3);
+    addVector<<<gridSize, blockSize, 0, *stream1>>>(devVec1, devVec2, devVec3);
     checkErr();
     // addVector<<<1, SIZE>>>(devVec1, devVec2, devVec3);
 
     //Хендл event'а
-    syncEvent.record(); //Записываем event
-    Event::wait(syncEvent); //Синхронизируем event
+    syncEvent.record(*stream1); //Записываем event
+    // Event::wait(syncEvent); //Синхронизируем event
+    float time = Event::elapsedTime(startEvent, syncEvent);
 
     //Только теперь получаем результат расчета
     SAFE_CALL( cudaMemcpy(vec3, devVec3, sizeof(float) * SIZE, cudaMemcpyDeviceToHost) )
@@ -68,6 +74,8 @@ int main(int argc, char const *argv[])
     {
         std::cout<< i <<" : "<< vec3[i] << std::endl;
     }
+
+    std::cout << "Elapsed Time = " << time << std::endl;
 
     cudaFree(devVec1);
     cudaFree(devVec2);

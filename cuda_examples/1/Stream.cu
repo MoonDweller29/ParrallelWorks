@@ -11,4 +11,9 @@ Stream::~Stream() {
 
 cudaError_t Stream::wait(const Event& event) const {
 	return cudaStreamWaitEvent(stream, *event, 0);
-} 
+}
+
+cudaError_t Stream::synchronize() const {
+	return cudaStreamSynchronize(stream);
+}
+

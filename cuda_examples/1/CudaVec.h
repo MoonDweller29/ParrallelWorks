@@ -26,15 +26,18 @@ private:
 	bool _locked = false;
 };
 
-// class PinnedVec {
-// public:
-// 	PinnedVec();
-// 	~PinnedVec();
+class PinnedVec {
+public:
+	PinnedVec();
+	~PinnedVec();
 
-// 	float* host()   const { return _host; }
-// 	float* device() const { return _device; }
-// private:
-// 	float* _host = NULL;
-// 	float* _device = NULL;
-// 	size_t _size = 0;
-// }
+	cudaError_t malloc(size_t size);
+	float &operator[](int i);
+
+	float* host()   const { return _host; }
+	float* device() const { return _device; }
+private:
+	float* _host = NULL;
+	float* _device = NULL;
+	size_t _size = 0;
+};

@@ -44,12 +44,25 @@ HostVec::~HostVec() {
 }
 
 
-// PinnedVec::PinnedVec() :
-//     _host(NULL), _device(NULL), _size(NULL)
-// {}
 
-// PinnedVec::~PinnedVec() {
-//     if (_host != NULL) {
-//         cudaFree(_host);
-//     }
-// }
+PinnedVec::PinnedVec() :
+    _host(NULL), _device(NULL), _size(0)
+{}
+
+cudaError_t PinnedVec::malloc(size_t size) {
+    _size = size;
+    cudaError_t err = cudaHostAlloc((void**)&_host, size*sizeof(float), cudaHostAllocMapped);
+    cudaHostGetDevicePointer((void**)&_device, _host, 0);
+
+    return err;
+}
+
+float &PinnedVec::operator[](int i) {
+    return _host[i];
+}
+
+PinnedVec::~PinnedVec() {
+    if (_host != NULL) {
+        cudaFree(_host);
+    }
+}

@@ -86,15 +86,15 @@ Solver::Solver(const Config &config, int argc, char **argv) :
 
     clearRequests();
 
-    double max = rank+0.5;
-    if (rank == _root)
-        max = 0;
-    double out_max;
+    // double max = rank+0.5;
+    // if (rank == _root)
+    //     max = 0;
+    // double out_max;
 
-    MPI_Reduce(&max, &out_max, 1, MPI_DOUBLE, MPI_MAX, _root, MPI_COMM_WORLD);
-    if (rank == _root){
-        std::cout << "MAX = " << out_max << std::endl;
-    }
+    // MPI_Reduce(&max, &out_max, 1, MPI_DOUBLE, MPI_MAX, _root, MPI_COMM_WORLD);
+    // if (rank == _root){
+    //     std::cout << "MAX = " << out_max << std::endl;
+    // }
 
     // MPI_Barrier(MPI_COMM_WORLD);
     // std::cout << rank <<": "<< 
@@ -325,14 +325,14 @@ void Solver::run(int K) {
         rotateBlocks();
     }
 
-    std::stringstream s;
-    s << "res/"<<_coord[0]<<"_"<<_coord[1]<<"_"<<_coord[2]<<".mat";
-    blocks[1]->save(s.str().c_str());
-    if (rank == _root) {
-        std::stringstream s_e;
-        s_e << N[0] << ".vec";
-        dump_vector(errors, s_e.str().c_str());
-    }
+    // std::stringstream s;
+    // s << "res/"<<_coord[0]<<"_"<<_coord[1]<<"_"<<_coord[2]<<".mat";
+    // blocks[1]->save(s.str().c_str());
+    // if (rank == _root) {
+    //     std::stringstream s_e;
+    //     s_e << N[0] << ".vec";
+    //     dump_vector(errors, s_e.str().c_str());
+    // }
 }
 
 

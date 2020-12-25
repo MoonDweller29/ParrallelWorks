@@ -1,1 +1,1 @@
-nvcc -ccbin mpic++ main.cu Event.cu Stream.cu CudaVec.cu -o main.out
+nvcc -ccbin mpic++ main.cu Event.cu Stream.cu CudaVec.cu vecAdd.cu -o main.out

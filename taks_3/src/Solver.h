@@ -5,6 +5,7 @@
 #include "Mat3D.h"
 #include "cuda_utils/CudaVec.h"
 #include "cuda_utils/Stream.h"
+#include "CudaSolver.h"
 #include "mpi.h"
 
 
@@ -17,6 +18,7 @@ public:
 	~Solver();
 
 private:
+	CudaSolver cudaSolver;
 	double L[3];
 	int N[3]; //grid size
 	double h[3];
@@ -50,6 +52,7 @@ private:
 	void calcBlockSize();
 	void allocBlocks();
 	void allocSlices();
+	void initCudaSolver();
 	void freeBlocks();
 	void rotateBlocks();
 

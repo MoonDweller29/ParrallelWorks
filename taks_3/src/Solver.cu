@@ -1,7 +1,6 @@
 #include "omp.h"
 #include "Solver.h"
 #include "INIReader.h"
-#include "kernels.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -105,6 +104,14 @@ Solver::Solver(const Config &config, int argc, char **argv) :
     initTags();
     allocBlocks();
     allocSlices();
+    initCudaSolver();
+}
+
+void Solver::initCudaSolver() {
+    cudaSolver.setL(L);
+    cudaSolver.seth(h);
+    cudaSolver.setNmin(Nmin);
+    cudaSolver.seta_t(phi.getA_t());
 }
 
 
@@ -235,7 +242,7 @@ void Solver::updateBorders(Mat3D& block) {
 
 
 void Solver::fillU0(Mat3D &block, const IFunction3D &phi) {
-    ::fillU0(block, L, Nmin, h, phi.getA_t(), *stream1);
+    cudaSolver.fillU0(block, *stream1);
     stream1.synchronize();
     block.toCPU();
     // for (int i = -1; i <= Nsize[0]; ++i) {
@@ -341,7 +348,6 @@ void Solver::run(int K) {
 void Solver::allocBlocks() {
     for (int i = 0; i < 3; ++i) {
         blocks[i] = new Mat3D(Nsize[0], Nsize[1], Nsize[2]);
-        blocks[i]->fill(0, *stream1);
     }
 }
 

@@ -43,7 +43,9 @@ private:
 	Stream stream1, stream2;
 
 	Mat3D *blocks[3];
-	HostVec slices[3][2];
+	HostVec out_slices[3][2];
+	HostVec in_slices[3][2];
+
 	std::vector<double> errors;
 	void calcBlockSize();
 	void allocBlocks();

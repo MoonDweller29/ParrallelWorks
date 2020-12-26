@@ -155,10 +155,10 @@ void Solver::sendBorders(Mat3D& block) {
 
     for (int axis = 0; axis < 3; ++axis) {
         if (periodic[axis] && (procShape[axis] == 1)) {
-            block.slice(0, axis, slices[axis][0]);
-            block.slice(Nsize[axis]-1, axis, slices[axis][1]);
-            block.setSlice(-1, axis, slices[axis][1]);
-            block.setSlice(Nsize[axis], axis, slices[axis][0]);
+            block.slice(0, axis, out_slices[axis][0]);
+            block.slice(Nsize[axis]-1, axis, out_slices[axis][1]);
+            block.setSlice(-1, axis, out_slices[axis][1]);
+            block.setSlice(Nsize[axis], axis, out_slices[axis][0]);
             continue;
         }
         
@@ -166,12 +166,12 @@ void Solver::sendBorders(Mat3D& block) {
             block.setZeroSlice(-1, axis);
             block.setZeroSlice(0, axis);
         } else {
-            block.slice(0, axis, slices[axis][0]);
+            block.slice(0, axis, out_slices[axis][0]);
             int recv_coord[3] = {_coord[0], _coord[1], _coord[2]};
             recv_coord[axis] -= 1;
             int recv_rank = procId(recv_coord);
             MPI_Isend(
-                slices[axis][0].data(), slices[axis][0].size(), MPI_DOUBLE,
+                out_slices[axis][0].data(), out_slices[axis][0].size(), MPI_DOUBLE,
                 recv_rank, sender_tags[axis][0], MPI_COMM_WORLD, &(send_req[axis][0])
             );
         }
@@ -180,12 +180,12 @@ void Solver::sendBorders(Mat3D& block) {
             block.setZeroSlice(Nsize[axis], axis);
         }
         else {
-            block.slice(Nsize[axis]-1, axis, slices[axis][1]);
+            block.slice(Nsize[axis]-1, axis, out_slices[axis][1]);
             int recv_coord[3] = {_coord[0], _coord[1], _coord[2]};
             recv_coord[axis] += 1;
             int recv_rank = procId(recv_coord);
             MPI_Isend(
-                slices[axis][1].data(), slices[axis][1].size(), MPI_DOUBLE,
+                out_slices[axis][1].data(), out_slices[axis][1].size(), MPI_DOUBLE,
                 recv_rank, sender_tags[axis][1], MPI_COMM_WORLD, &(send_req[axis][1])
             );
         }
@@ -204,13 +204,12 @@ void Solver::recvBorders(Mat3D& block) {
             send_coord[axis] += 1;
             int sender_rank = procId(send_coord);
 
-            HostVec in_slice(slice_len);
 
-            MPI_Recv(in_slice.data(), slice_len, MPI_DOUBLE, 
+            MPI_Recv(in_slices[axis][1].data(), slice_len, MPI_DOUBLE, 
                 sender_rank, sender_tags[axis][0],
                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-            block.setSlice(Nsize[axis], axis, in_slice);
+            block.setSlice(Nsize[axis], axis, in_slices[axis][1]);
         }
 
         
@@ -219,13 +218,11 @@ void Solver::recvBorders(Mat3D& block) {
             send_coord[axis] -= 1; 
             int sender_rank = procId(send_coord);
             
-            HostVec in_slice(slice_len);
-
-            MPI_Recv(in_slice.data(), slice_len, MPI_DOUBLE, 
+            MPI_Recv(in_slices[axis][0].data(), slice_len, MPI_DOUBLE, 
                 sender_rank, sender_tags[axis][1],
                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-            block.setSlice(-1, axis, in_slice);
+            block.setSlice(-1, axis, in_slices[axis][0]);
         }
     }
 }
@@ -348,14 +345,18 @@ void Solver::allocSlices() {
     for (int dim = 0; dim < 3; ++dim) {
         if (!periodic[dim]) {
             if (_coord[dim] != 0) {
-                slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
+                out_slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
+                in_slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
             }
             if (_coord[dim] != procShape[dim]) {
-                slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
+                out_slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
+                in_slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
             }
         } else {
-            slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
-            slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
+            out_slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
+            out_slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
+            in_slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
+            in_slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
         }
     }
 }

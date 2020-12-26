@@ -110,6 +110,7 @@ Solver::Solver(const Config &config, int argc, char **argv) :
 void Solver::initCudaSolver() {
     cudaSolver.setL(L);
     cudaSolver.seth(h);
+    cudaSolver.setTau(tau);
     cudaSolver.setNmin(Nmin);
     cudaSolver.seta_t(phi.getA_t());
 }
@@ -293,26 +294,14 @@ double Solver::laplacian(const Mat3D &block, int i, int j, int k) const {
 
 
 void Solver::fillU1(const Mat3D &block0, Mat3D &block1) {
-    #pragma omp parallel for
-    for (int i = 0; i < Nsize[0]; ++i) {
-        for (int j = 0; j < Nsize[1]; ++j) {
-            for (int k = 0; k < Nsize[2]; ++k) {
-                block1(i,j,k) = block0(i,j,k) + tau*tau*0.5*laplacian(block0, i,j,k);
-            }
-        }
-    }
+    cudaSolver.fillU1(block0, block1, *stream1);
+    block1.toCPU();
 }
 
 
 void Solver::step(const Mat3D &block0, const Mat3D &block1, Mat3D &block2) {
-    #pragma omp parallel for
-    for (int i = 0; i < Nsize[0]; ++i) {
-        for (int j = 0; j < Nsize[1]; ++j) {
-            for (int k = 0; k < Nsize[2]; ++k) {
-                block2(i,j,k) = 2*block1(i,j,k) - block0(i,j,k) + tau*tau*laplacian(block1, i,j,k);
-            }
-        }
-    }
+    cudaSolver.step(block0, block1, block2, *stream1);
+    block2.toCPU();
 }
 
 
@@ -323,14 +312,18 @@ void Solver::run(int K) {
     fillU0(*(blocks[0]), phi);
     updateBorders(*(blocks[0]));
     printErr(*(blocks[0]), u, 0);
+    blocks[0]->toGPU();
     fillU1(*(blocks[0]), *(blocks[1]));
     updateBorders(*(blocks[1]));
     printErr(*(blocks[1]), u, tau);
+    blocks[1]->toGPU();
+
 
     for (int n = 2; n <= K; ++n) {
         step(*(blocks[0]), *(blocks[1]), *(blocks[2]));
         updateBorders(*(blocks[2]));
         printErr(*(blocks[2]), u, tau*n);
+        blocks[2]->toGPU();
         rotateBlocks();
     }
 

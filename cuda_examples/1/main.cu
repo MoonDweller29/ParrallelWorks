@@ -49,14 +49,13 @@ int main(int argc, char const *argv[])
     SAFE_CALL( cudaMemcpy(devVec1.data(), vec1.data(), sizeof(float) * SIZE, cudaMemcpyHostToDevice) )
     SAFE_CALL( cudaMemcpy(devVec2.data(), vec2.data(), sizeof(float) * SIZE, cudaMemcpyHostToDevice) )
     
-    dim3 gridSize = dim3(SIZE/512, 1, 1);    //Размер используемого грида
-    dim3 blockSize = dim3(512, 1, 1); //Размер используемого блока
 
     startEvent[0].record(*stream1);
 
     //Выполняем вызов функции ядра
     for (int i = 0; i < 1; ++i) {
-        addVector<<<gridSize, blockSize, 0, *stream1>>>(devVec1.data(), devVec2.data(), devVec3.data());
+        // addVector<<<gridSize, blockSize, 0, *stream1>>>(devVec1.data(), devVec2.data(), devVec3.data());
+        addVector(devVec1.data(), devVec2.data(), devVec3.data(), SIZE, stream1);
     }
     
     checkErr();
@@ -73,7 +72,8 @@ int main(int argc, char const *argv[])
     stream2.wait(syncEvent[0]);
     for (int i = 0; i < 1; ++i)
     {
-        addVector<<<gridSize, blockSize, 0, *stream2>>>(devVec1.data(), devVec2.data(), devVec4.data());
+        // addVector<<<gridSize, blockSize, 0, *stream2>>>(devVec1.data(), devVec2.data(), devVec4.data());
+        addVector(devVec1.data(), devVec2.data(), devVec4.data(), SIZE, stream2);
     }
     syncEvent[1].record(*stream2);
 
@@ -86,11 +86,13 @@ int main(int argc, char const *argv[])
 
 
     for (int i = 0; i < 1; ++i) {
-        addVector<<<gridSize, blockSize, 0, *stream1>>>(devVec1.data(), devVec2.data(), pinnedVec.device());
+        // addVector<<<gridSize, blockSize, 0, *stream1>>>(devVec1.data(), devVec2.data(), pinnedVec.device());
+        addVector(devVec1.data(), devVec2.data(), pinnedVec.device(), SIZE, stream1);
     }
     for (int i = 0; i < 1; ++i)
     {
-        addVector<<<gridSize, blockSize, 0, *stream2>>>(devVec1.data(), devVec2.data(), devVec4.data());
+        // addVector<<<gridSize, blockSize, 0, *stream2>>>(devVec1.data(), devVec2.data(), devVec4.data());
+        addVector(devVec1.data(), devVec2.data(), devVec4.data(), SIZE, stream2);
     }
 
     stream1.synchronize();

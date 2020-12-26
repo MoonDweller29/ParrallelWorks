@@ -1,3 +1,5 @@
+#pragma once
 #include <cuda.h>
+#include "Stream.h"
 
-__global__ void addVector(float* left, float* right, float* result);
+void addVector(float* left, float* right, float* result, int SIZE, const Stream& stream);

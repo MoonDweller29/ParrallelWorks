@@ -25,5 +25,5 @@ private:
 	int _I, _J, _K;
 	int _rI, _rJ, _rK; //real data size
 	int _shape[3];
-	std::vector<double> _data;
+	HostVec _data;
 };

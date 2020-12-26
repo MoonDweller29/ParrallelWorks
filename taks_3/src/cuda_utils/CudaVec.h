@@ -10,8 +10,8 @@ public:
 	double* data() const { return v; }
 	cudaError_t malloc(size_t size);
 private:
-	size_t _size = 0;
-	double* v = NULL;
+	size_t _size;
+	double* v;
 
 	void clear();
 };
@@ -24,12 +24,14 @@ public:
 
 	cudaError_t malloc(size_t size, bool locked = false);
 	double *data() const { return v; }
+	size_t size() const { return _size; }
 	double &operator[](int i);
+	double &at(int i);
 
 private:
-	double* v = NULL;
-	size_t _size = 0;
-	bool _locked = false;
+	double* v;
+	size_t _size;
+	bool _locked;
 
 	void clear();
 };
@@ -45,7 +47,7 @@ public:
 	double* host()   const { return _host; }
 	double* device() const { return _device; }
 private:
-	double* _host = NULL;
-	double* _device = NULL;
-	size_t _size = 0;
+	double* _host;
+	double* _device;
+	size_t _size;
 };

@@ -1,10 +1,13 @@
 #include "CudaVec.h"
 #include "cuda.h"
+#include <sstream>
+#include <iostream>
+
 
 DeviceVec::DeviceVec() : v(NULL), _size(0)
 {}
 
-DeviceVec::DeviceVec(size_t size) {
+DeviceVec::DeviceVec(size_t size) : v(NULL), _size(size) {
     malloc(size);
 }
 
@@ -32,7 +35,7 @@ HostVec::HostVec() : v(NULL), _size(0)
 {}
 
 HostVec::HostVec(size_t size, bool locked) :
-    _size(size), _locked(locked)
+    v(NULL), _size(size), _locked(locked)
 {
     malloc(size, locked);
 }
@@ -52,6 +55,18 @@ cudaError_t HostVec::malloc(size_t size, bool locked) {
 double &HostVec::operator[](int i) {
     return v[i];
 }
+
+double &HostVec::at(int i) {
+    if (i >= 0 && i < _size) {
+        return v[i];
+    } else {
+        std::stringstream s;
+        s << "Error in HostVec::at : index " << i << " is out of range [0, " << _size << ")";
+        std::cout << s.str() << std::endl;
+        throw s.str();
+    }
+}
+
 
 void HostVec::clear() {
     if (v != NULL) {

@@ -6,7 +6,7 @@ Mat3D::Mat3D(int I, int J, int K) :
 	_pad(1),
 	_I(I), _J(J), _K(K),
 	_rI(I+2), _rJ(J+2), _rK(K+2),
-	_data((I+2)*(J+2)*(K+2), 0.0)
+	_data((I+2)*(J+2)*(K+2), true)
 {
 	_shape[0] = I;
 	_shape[1] = J;

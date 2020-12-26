@@ -20,7 +20,7 @@ __global__ void addVector(float* left, float* right, float* result)
 
 void addVector(float* left, float* right, float* result, int SIZE, const Stream& stream) {
 	int curr_mult = 2;
-    SAFE_CALL( cudaMemcpyToSymbol(mult, &curr_mult, sizeof(int)) )
+    SAFE_CALL( cudaMemcpyToSymbolAsync(mult, &curr_mult, sizeof(int), 0, cudaMemcpyHostToDevice,*stream) )
 
     dim3 gridSize = dim3(SIZE/512, 1, 1);    //Размер используемого грида
     dim3 blockSize = dim3(512, 1, 1); //Размер используемого блока

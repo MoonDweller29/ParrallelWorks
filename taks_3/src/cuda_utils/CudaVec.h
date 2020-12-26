@@ -9,6 +9,8 @@ public:
 
 	double* data() const { return v; }
 	cudaError_t malloc(size_t size);
+	void fill(double value, cudaStream_t stream = 0);
+
 private:
 	size_t _size;
 	double* v;
@@ -23,8 +25,11 @@ public:
 	~HostVec();
 
 	cudaError_t malloc(size_t size, bool locked = false);
+	void fill(double value);
+	
 	double *data() const { return v; }
 	size_t size() const { return _size; }
+	
 	double &operator[](int i);
 	double &at(int i);
 

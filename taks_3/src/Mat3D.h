@@ -9,12 +9,17 @@ public:
 	Mat3D(int I, int J, int K);
 	~Mat3D(){};
 
+	double *device() const { return device_data.data(); }
+
 	double &operator()(int i, int j, int k);
 	const double &operator()(int i, int j, int k) const;
 	const int &shape(int i) const;
-	std::vector<double> slice(int ind, int axis) const;
-	void setSlice(int ind, int axis, const std::vector<double> &other_slice);
+	void slice(int ind, int axis, HostVec &out_slice) const;
+	int sliceLen(int axis) const;
+
+	void setSlice(int ind, int axis, HostVec &other_slice);
 	void setZeroSlice(int ind, int axis);
+	void fill(double value, cudaStream_t stream = 0);
 
 	void print(bool padded = false) const;
 	void saveToCSV(const char* filename) const;
@@ -25,5 +30,6 @@ private:
 	int _I, _J, _K;
 	int _rI, _rJ, _rK; //real data size
 	int _shape[3];
-	HostVec _data;
+	HostVec host_data;
+	DeviceVec device_data;
 };

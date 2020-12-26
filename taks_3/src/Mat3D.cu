@@ -6,16 +6,22 @@ Mat3D::Mat3D(int I, int J, int K) :
 	_pad(1),
 	_I(I), _J(J), _K(K),
 	_rI(I+2), _rJ(J+2), _rK(K+2),
-	_data((I+2)*(J+2)*(K+2), true)
+	host_data((I+2)*(J+2)*(K+2)),
+	device_data((I+2)*(J+2)*(K+2))
 {
 	_shape[0] = I;
 	_shape[1] = J;
 	_shape[2] = K;
 }
 
+void Mat3D::fill(double value, cudaStream_t stream) {
+	host_data.fill(value);
+	device_data.fill(value, stream);
+}
+
 
 double &Mat3D::operator()(int i, int j, int k) {
-	return _data.at(((i+_pad)*_rJ + (j+_pad))*_rK + (k+_pad));
+	return host_data.at(((i+_pad)*_rJ + (j+_pad))*_rK + (k+_pad));
 }
 
 
@@ -28,7 +34,7 @@ const int &Mat3D::shape(int i) const {
 	return _shape[i];
 }
 
-std::vector<double> Mat3D::slice(int ind, int axis) const {
+void Mat3D::slice(int ind, int axis, HostVec &out_slice) const {
 	int i_min[3] = {0, 0, 0};
 	int i_max[3] = {_I, _J, _K};
 	if(axis < 0 || axis > 2) {
@@ -42,23 +48,30 @@ std::vector<double> Mat3D::slice(int ind, int axis) const {
 	i_max[axis] = ind+1;
 	int dim_size[3] = { i_max[0]-i_min[0], i_max[1]-i_min[1], i_max[2]-i_min[2] };
 
-	std::vector<double> out_slice;
-	out_slice.reserve(
-		dim_size[0]*dim_size[1]*dim_size[2]
-	);
-
+	int counter = 0;
 	for (int i = i_min[0]; i < i_max[0]; ++i) {
 		for (int j = i_min[1]; j < i_max[1]; ++j) {
 			for (int k = i_min[2]; k < i_max[2]; ++k) {
-				out_slice.push_back((*this)(i, j, k));
+				out_slice.at(counter) = (*this)(i, j, k);
+				counter++;
 			}
 		}
 	}
-
-	return out_slice;
 }
 
-void Mat3D::setSlice(int ind, int axis, const std::vector<double> &other_slice) {
+int Mat3D::sliceLen(int axis) const {
+	if(axis < 0 || axis > 2) {
+		std::cerr << "wrong axis " << axis << std::endl;
+	}
+
+	int dim_size[3] = {_I, _J, _K};
+	dim_size[axis] = 1;
+
+	return dim_size[0]*dim_size[1]*dim_size[2];
+}
+
+
+void Mat3D::setSlice(int ind, int axis, HostVec &other_slice) {
 	int i_min[3] = {0, 0, 0};
 	int i_max[3] = {_I, _J, _K};
 	if(axis < 0 || axis > 2) {
@@ -173,5 +186,5 @@ void Mat3D::save(const char* filename) const {
 		std::cerr << "can't open file " << filename << std::endl;
 		return;
 	}
-	out_file.write((char *) _data.data(), _data.size()*sizeof(double));
+	out_file.write((char *) host_data.data(), host_data.size()*sizeof(double));
 }

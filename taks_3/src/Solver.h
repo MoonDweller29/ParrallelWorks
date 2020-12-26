@@ -3,6 +3,8 @@
 #include "U4D.h"
 #include "F3D_f4.h"
 #include "Mat3D.h"
+#include "cuda_utils/CudaVec.h"
+#include "cuda_utils/Stream.h"
 #include "mpi.h"
 
 
@@ -38,11 +40,14 @@ private:
 	U4D u;
 	F3D_f4 phi;
 
+	Stream stream1, stream2;
+
 	Mat3D *blocks[3];
-	std::vector<double> slices[3][2];
+	HostVec slices[3][2];
 	std::vector<double> errors;
 	void calcBlockSize();
 	void allocBlocks();
+	void allocSlices();
 	void freeBlocks();
 	void rotateBlocks();
 

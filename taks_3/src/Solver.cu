@@ -103,6 +103,7 @@ Solver::Solver(const Config &config, int argc, char **argv) :
 
     initTags();
     allocBlocks();
+    allocSlices();
 }
 
 
@@ -154,8 +155,8 @@ void Solver::sendBorders(Mat3D& block) {
 
     for (int axis = 0; axis < 3; ++axis) {
         if (periodic[axis] && (procShape[axis] == 1)) {
-            slices[axis][0] = block.slice(0, axis);
-            slices[axis][1] = block.slice(Nsize[axis]-1, axis);
+            block.slice(0, axis, slices[axis][0]);
+            block.slice(Nsize[axis]-1, axis, slices[axis][1]);
             block.setSlice(-1, axis, slices[axis][1]);
             block.setSlice(Nsize[axis], axis, slices[axis][0]);
             continue;
@@ -165,7 +166,7 @@ void Solver::sendBorders(Mat3D& block) {
             block.setZeroSlice(-1, axis);
             block.setZeroSlice(0, axis);
         } else {
-            slices[axis][0] = block.slice(0, axis);
+            block.slice(0, axis, slices[axis][0]);
             int recv_coord[3] = {_coord[0], _coord[1], _coord[2]};
             recv_coord[axis] -= 1;
             int recv_rank = procId(recv_coord);
@@ -179,7 +180,7 @@ void Solver::sendBorders(Mat3D& block) {
             block.setZeroSlice(Nsize[axis], axis);
         }
         else {
-            slices[axis][1] = block.slice(Nsize[axis]-1, axis);
+            block.slice(Nsize[axis]-1, axis, slices[axis][1]);
             int recv_coord[3] = {_coord[0], _coord[1], _coord[2]};
             recv_coord[axis] += 1;
             int recv_rank = procId(recv_coord);
@@ -203,7 +204,7 @@ void Solver::recvBorders(Mat3D& block) {
             send_coord[axis] += 1;
             int sender_rank = procId(send_coord);
 
-            std::vector<double> in_slice(slice_len);
+            HostVec in_slice(slice_len);
 
             MPI_Recv(in_slice.data(), slice_len, MPI_DOUBLE, 
                 sender_rank, sender_tags[axis][0],
@@ -218,7 +219,7 @@ void Solver::recvBorders(Mat3D& block) {
             send_coord[axis] -= 1; 
             int sender_rank = procId(send_coord);
             
-            std::vector<double> in_slice(slice_len);
+            HostVec in_slice(slice_len);
 
             MPI_Recv(in_slice.data(), slice_len, MPI_DOUBLE, 
                 sender_rank, sender_tags[axis][1],
@@ -339,8 +340,26 @@ void Solver::run(int K) {
 void Solver::allocBlocks() {
     for (int i = 0; i < 3; ++i) {
         blocks[i] = new Mat3D(Nsize[0], Nsize[1], Nsize[2]);
+        blocks[i]->fill(0, *stream1);
     }
 }
+
+void Solver::allocSlices() {
+    for (int dim = 0; dim < 3; ++dim) {
+        if (!periodic[dim]) {
+            if (_coord[dim] != 0) {
+                slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
+            }
+            if (_coord[dim] != procShape[dim]) {
+                slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
+            }
+        } else {
+            slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
+            slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
+        }
+    }
+}
+
 
 void Solver::freeBlocks() {
     for (int i = 0; i < 3; ++i) {

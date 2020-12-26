@@ -1,7 +1,16 @@
 #include "CudaVec.h"
 #include "cuda.h"
+#include "cuda_macro.h"
 #include <sstream>
 #include <iostream>
+
+__constant__ double fill_value;
+
+__global__ void fillBuf(double* buf)
+{
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  buf[idx] = fill_value;
+}
 
 
 DeviceVec::DeviceVec() : v(NULL), _size(0)
@@ -16,6 +25,16 @@ cudaError_t DeviceVec::malloc(size_t size) {
     _size = size;
     return cudaMalloc((void**)&v, size*sizeof(double));
 }
+
+void DeviceVec::fill(double value, cudaStream_t stream) {
+    SAFE_CALL( cudaMemcpyToSymbolAsync(fill_value, &value, sizeof(double), 0, cudaMemcpyHostToDevice, stream) )
+
+    dim3 gridSize = dim3(_size/512, 1, 1);
+    dim3 blockSize = dim3(512, 1, 1);
+
+    fillBuf<<<gridSize, blockSize, 0, stream>>>(v);
+}
+
 
 void DeviceVec::clear() {
     if (v != NULL) {
@@ -51,6 +70,13 @@ cudaError_t HostVec::malloc(size_t size, bool locked) {
         return cudaSuccess;
     }
 }
+
+void HostVec::fill(double value) {
+    for (int i = 0; i < _size; ++i) {
+        v[i] = value;
+    }
+}
+
 
 double &HostVec::operator[](int i) {
     return v[i];

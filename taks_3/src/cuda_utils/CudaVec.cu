@@ -1,24 +1,44 @@
 #include "CudaVec.h"
 #include "cuda.h"
 
-DeviceVec::DeviceVec() : v(NULL)
+DeviceVec::DeviceVec() : v(NULL), _size(0)
 {}
 
+DeviceVec::DeviceVec(size_t size) {
+    malloc(size);
+}
+
 cudaError_t DeviceVec::malloc(size_t size) {
+    clear();
+    _size = size;
     return cudaMalloc((void**)&v, size*sizeof(double));
 }
 
-
-DeviceVec::~DeviceVec() {
+void DeviceVec::clear() {
     if (v != NULL) {
         cudaFree(v);
     }
+    v = NULL;
 }
+
+DeviceVec::~DeviceVec() {
+    clear();
+}
+
+
+
 
 HostVec::HostVec() : v(NULL), _size(0)
 {}
 
+HostVec::HostVec(size_t size, bool locked) :
+    _size(size), _locked(locked)
+{
+    malloc(size, locked);
+}
+
 cudaError_t HostVec::malloc(size_t size, bool locked) {
+    clear();
     _size = size;
     _locked = locked;
     if (locked) {
@@ -33,15 +53,21 @@ double &HostVec::operator[](int i) {
     return v[i];
 }
 
-HostVec::~HostVec() {
+void HostVec::clear() {
     if (v != NULL) {
         if (_locked) {
             cudaFree(v);
         } else {
             delete[] v;
         }
-    }   
+    }
+    v = NULL;
 }
+
+HostVec::~HostVec() {
+    clear();
+}
+
 
 
 

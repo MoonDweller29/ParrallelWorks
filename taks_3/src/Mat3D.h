@@ -1,4 +1,5 @@
 #pragma once
+#include "cuda_utils/CudaVec.h"
 #include <vector>
 
 //padded with border width 1 by default

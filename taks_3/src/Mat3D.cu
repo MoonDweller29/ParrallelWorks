@@ -19,6 +19,12 @@ void Mat3D::fill(double value, cudaStream_t stream) {
 	device_data.fill(value, stream);
 }
 
+void Mat3D::toCPU() {
+    cudaMemcpy(host_data.data(), device_data.data(), sizeof(double)*_rI*_rJ*_rK, cudaMemcpyDeviceToHost);
+}
+void Mat3D::toGPU() {
+    cudaMemcpy(device_data.data(), host_data.data(), sizeof(double)*_rI*_rJ*_rK, cudaMemcpyHostToDevice);
+}
 
 double &Mat3D::operator()(int i, int j, int k) {
 	return host_data.at(((i+_pad)*_rJ + (j+_pad))*_rK + (k+_pad));
@@ -46,7 +52,6 @@ void Mat3D::slice(int ind, int axis, HostVec &out_slice) const {
 
 	i_min[axis] = ind;
 	i_max[axis] = ind+1;
-	int dim_size[3] = { i_max[0]-i_min[0], i_max[1]-i_min[1], i_max[2]-i_min[2] };
 
 	int counter = 0;
 	for (int i = i_min[0]; i < i_max[0]; ++i) {

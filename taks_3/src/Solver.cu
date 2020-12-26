@@ -1,6 +1,7 @@
 #include "omp.h"
 #include "Solver.h"
 #include "INIReader.h"
+#include "kernels.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -234,16 +235,18 @@ void Solver::updateBorders(Mat3D& block) {
 
 
 void Solver::fillU0(Mat3D &block, const IFunction3D &phi) {
-    #pragma omp parallel for
-    for (int i = -1; i <= Nsize[0]; ++i) {
-        for (int j = -1; j <= Nsize[1]; ++j) {
-            for (int k = -1; k <= Nsize[2]; ++k) {
-                block(i,j,k) = phi(
-                    (i+Nmin[0])*h[0], (j+Nmin[1])*h[1], (k+Nmin[2])*h[2]
-                );
-            }
-        }
-    }
+    ::fillU0(block, L, Nmin, h, phi.getA_t(), *stream1);
+    stream1.synchronize();
+    block.toCPU();
+    // for (int i = -1; i <= Nsize[0]; ++i) {
+    //     for (int j = -1; j <= Nsize[1]; ++j) {
+    //         for (int k = -1; k <= Nsize[2]; ++k) {
+    //             block(i,j,k) = phi(
+    //                 (i+Nmin[0])*h[0], (j+Nmin[1])*h[1], (k+Nmin[2])*h[2]
+    //             );
+    //         }
+    //     }
+    // }
 }
 
 
@@ -311,6 +314,7 @@ void Solver::run(int K) {
     this->K = K;
 
     fillU0(*(blocks[0]), phi);
+    updateBorders(*(blocks[0]));
     printErr(*(blocks[0]), u, 0);
     fillU1(*(blocks[0]), *(blocks[1]));
     updateBorders(*(blocks[1]));

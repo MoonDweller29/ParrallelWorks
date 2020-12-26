@@ -8,4 +8,5 @@ nvcc -ccbin mpic++ -O0 \
 	src/cuda_utils/Stream.cu \
 	src/cuda_utils/Event.cu \
 	src/cuda_utils/CudaVec.cu \
+	src/kernels.cu \
 	 -o main.out

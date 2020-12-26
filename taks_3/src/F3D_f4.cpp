@@ -9,6 +9,10 @@ double F3D_f4::operator()(double x, double y, double z) const {
 	return _f4(x, y, z, _t);
 }
 
+double F3D_f4::getA_t() const {
+	return _f4.getA_t();
+}
+
 void F3D_f4::setT(double t) {
 	_t = t;
 }

@@ -10,6 +10,8 @@ public:
 	~Mat3D(){};
 
 	double *device() const { return device_data.data(); }
+	void toCPU();
+	void toGPU();
 
 	double &operator()(int i, int j, int k);
 	const double &operator()(int i, int j, int k) const;

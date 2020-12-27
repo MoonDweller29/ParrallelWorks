@@ -8,6 +8,7 @@ public:
 	~DeviceVec();
 
 	double* data() const { return v; }
+	size_t size() const {return _size; }
 	cudaError_t malloc(size_t size);
 	void fill(double value, cudaStream_t stream = 0);
 

@@ -113,6 +113,8 @@ void Solver::initCudaSolver() {
     cudaSolver.setTau(tau);
     cudaSolver.setNmin(Nmin);
     cudaSolver.seta_t(phi.getA_t());
+    cudaSolver.setBlockSize(Nsize[0], Nsize[1], Nsize[2]);
+    cudaSolver.mallocResources(stream1, rank);
 }
 
 
@@ -322,8 +324,13 @@ void Solver::run(int K) {
     for (int n = 2; n <= K; ++n) {
         step(*(blocks[0]), *(blocks[1]), *(blocks[2]));
         updateBorders(*(blocks[2]));
-        printErr(*(blocks[2]), u, tau*n);
         blocks[2]->toGPU();
+        printErr(*(blocks[2]), u, tau*n);
+        cudaSolver.reduceErr(*(blocks[2]), tau*n, *stream2, rank);
+        stream2.synchronize();
+        if (rank == 0) {
+            std::cout << "GPU_ERR = " << cudaSolver.getErr() << std::endl;
+        }
         rotateBlocks();
     }
 

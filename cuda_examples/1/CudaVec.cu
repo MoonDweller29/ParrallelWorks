@@ -18,7 +18,24 @@ DeviceVec::~DeviceVec() {
 HostVec::HostVec() : v(NULL), _size(0)
 {}
 
+HostVec::HostVec(size_t size, bool locked) : v(NULL), _size(size) {
+    malloc(size, locked);
+}
+
+
+void HostVec::clear() {
+    if (v != NULL) {
+        if (_locked) {
+            cudaFree(v);
+        } else {
+            delete[] v;
+        }
+    }
+    v = NULL;
+}
+
 cudaError_t HostVec::malloc(size_t size, bool locked) {
+    clear();
     _size = size;
     _locked = locked;
     if (locked) {
@@ -34,13 +51,7 @@ float &HostVec::operator[](int i) {
 }
 
 HostVec::~HostVec() {
-    if (v != NULL) {
-        if (_locked) {
-            cudaFree(v);
-        } else {
-            delete[] v;
-        }
-    }   
+    clear();
 }
 
 

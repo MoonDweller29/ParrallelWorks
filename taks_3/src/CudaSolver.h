@@ -21,6 +21,8 @@ public:
 	double getErr();
 
 	void setZeroSlice(Mat3D &block, int ind, int axis, cudaStream_t stream);
+	void getSlice(const Mat3D &block, DeviceVec& slice, int ind, int axis, cudaStream_t stream);
+	void setSlice(Mat3D &block, const DeviceVec& slice, int ind, int axis, cudaStream_t stream);
 private:
 	double _L[3];
 	double _h[3];

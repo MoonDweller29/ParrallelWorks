@@ -147,6 +147,26 @@ __global__ void set_zero_slice(double *block, int ind, int axis) {
     block[raw_ind] = 0;
 }
 
+__global__ void get_slice(double *block, double *slice, int ind, int axis) {
+    int coord[3];
+    coord[axis] = ind;
+    coord[(axis+1) % 3] = blockIdx.x;
+    coord[(axis+2) % 3] = threadIdx.x;
+    int raw_ind = rawInd(coord[0], coord[1], coord[2]);
+
+    slice[blockIdx.x*blockDim.x + threadIdx.x] = block[raw_ind];
+}
+
+__global__ void set_slice(double *block, double *slice, int ind, int axis) {
+    int coord[3];
+    coord[axis] = ind;
+    coord[(axis+1) % 3] = blockIdx.x;
+    coord[(axis+2) % 3] = threadIdx.x;
+    int raw_ind = rawInd(coord[0], coord[1], coord[2]);
+
+    block[raw_ind] = slice[blockIdx.x*blockDim.x + threadIdx.x];
+}
+
 static int round_up_to_next_pow2(unsigned int x) {
     x--;
     x |= x >> 1;
@@ -281,4 +301,23 @@ void CudaSolver::setZeroSlice(Mat3D &block, int ind, int axis, cudaStream_t stre
     dim3 gridSize = dim3(Nsize[(axis+1)%3], 1, 1);
     dim3 blockSize = dim3(Nsize[(axis+2)%3], 1, 1);
     set_zero_slice<<<gridSize, blockSize, 0, stream>>>(block.device(), ind, axis);
+}
+
+void CudaSolver::getSlice(const Mat3D &block, DeviceVec& slice, int ind, int axis, cudaStream_t stream) {
+    if(axis < 0 || axis > 2) {
+        std::cerr << "wrong axis " << axis << std::endl;
+    }
+
+    dim3 gridSize = dim3(Nsize[(axis+1)%3], 1, 1);
+    dim3 blockSize = dim3(Nsize[(axis+2)%3], 1, 1);
+    get_slice<<<gridSize, blockSize, 0, stream>>>(block.device(), slice.data(), ind, axis);
+}
+void CudaSolver::setSlice(Mat3D &block, const DeviceVec& slice, int ind, int axis, cudaStream_t stream) {
+    if(axis < 0 || axis > 2) {
+        std::cerr << "wrong axis " << axis << std::endl;
+    }
+
+    dim3 gridSize = dim3(Nsize[(axis+1)%3], 1, 1);
+    dim3 blockSize = dim3(Nsize[(axis+2)%3], 1, 1);
+    set_slice<<<gridSize, blockSize, 0, stream>>>(block.device(), slice.data(), ind, axis);
 }

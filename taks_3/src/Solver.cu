@@ -181,15 +181,15 @@ void Solver::sendBorders(Mat3D& block) {
 
     for (int axis = 0; axis < 3; ++axis) {
         if (periodic[axis] && (procShape[axis] == 1)) {
-            stream1.wait(slice_is_on_host[axis][1]);
+            Event::wait(slice_is_on_host[axis][1]);
             sliceToGPU(axis, 0, out_slices[axis][1]);
-            stream1.wait(slice_is_on_host[axis][0]);
+            Event::wait(slice_is_on_host[axis][0]);
             sliceToGPU(axis, 1, out_slices[axis][0]);
             continue;
         }
         
         if ( !(_coord[axis] == 0 && !periodic[axis]) ) {
-            stream1.wait(slice_is_on_host[axis][0]);
+            Event::wait(slice_is_on_host[axis][0]);
 
             int recv_coord[3] = {_coord[0], _coord[1], _coord[2]};
             recv_coord[axis] -= 1;
@@ -201,7 +201,7 @@ void Solver::sendBorders(Mat3D& block) {
         }
 
         if ( !(_coord[axis] == (procShape[axis] -1) && !periodic[axis]) ) {
-            stream1.wait(slice_is_on_host[axis][1]);
+            Event::wait(slice_is_on_host[axis][1]);
             
             int recv_coord[3] = {_coord[0], _coord[1], _coord[2]};
             recv_coord[axis] += 1;
@@ -260,7 +260,6 @@ void Solver::fillU0(Mat3D &block, const IFunction3D &phi) {
     cudaSolver.fillU0(block, *stream1);
     setZeroSlices(block);
     copySlicesToCPU(block);
-    stream1.synchronize();
 }
 
 
@@ -291,7 +290,6 @@ void Solver::fillU1(const Mat3D &block0, Mat3D &block1) {
     cudaSolver.fillU1(block0, block1, *stream1);
     setZeroSlices(block1);
     copySlicesToCPU(block1);
-    stream1.synchronize();
 }
 
 
@@ -299,8 +297,6 @@ void Solver::step(const Mat3D &block0, const Mat3D &block1, Mat3D &block2) {
     cudaSolver.step(block0, block1, block2, *stream1);
     setZeroSlices(block2);
     copySlicesToCPU(block2);
-    stream1.synchronize();
-    
 }
 
 void Solver::sliceToCPU(int dim, int i) {

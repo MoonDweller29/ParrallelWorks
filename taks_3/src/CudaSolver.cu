@@ -269,6 +269,7 @@ void CudaSolver::reduceErr(const Mat3D &block, double u_t, Stream &stream, const
     int block_len = round_up_to_next_pow2(block.shape(2));
     dim3 blockSize = dim3(block_len/2, 1, 1);
 
+    stream.wait(wait_event);
     SAFE_CALL( cudaMemcpyToSymbolAsync(shape, static_cast<int*>(Nsize), 3*sizeof(int), 0, cudaMemcpyHostToDevice, *stream) )
     SAFE_CALL( cudaMemcpyToSymbolAsync(L, static_cast<double*>(_L), 3*sizeof(double), 0, cudaMemcpyHostToDevice, *stream) )
     SAFE_CALL( cudaMemcpyToSymbolAsync(Nmin, static_cast<int*>(_Nmin), 3*sizeof(int), 0, cudaMemcpyHostToDevice, *stream) )
@@ -276,7 +277,6 @@ void CudaSolver::reduceErr(const Mat3D &block, double u_t, Stream &stream, const
     SAFE_CALL( cudaMemcpyToSymbolAsync(a_t, &_a_t, sizeof(double), 0, cudaMemcpyHostToDevice, *stream) )
     SAFE_CALL( cudaMemcpyToSymbolAsync(t_const, &_t, sizeof(double), 0, cudaMemcpyHostToDevice, *stream) )
 
-    stream.wait(wait_event);
     reduce_err<<<gridSize, blockSize, blockSize.x*sizeof(double), *stream>>>(block.device(), buf[0].data());
     
     int elem_count = buf[0].size()/(1024*2);

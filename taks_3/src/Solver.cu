@@ -1,6 +1,7 @@
 #include "omp.h"
 #include "Solver.h"
 #include "INIReader.h"
+#include "cuda_utils/cuda_macro.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -260,17 +261,8 @@ void Solver::updateBorders(Mat3D& block) {
 
 void Solver::fillU0(Mat3D &block, const IFunction3D &phi) {
     cudaSolver.fillU0(block, *stream1);
-    stream1.synchronize();
+    copySlicesToCPU(block);
     block.toCPU();
-    // for (int i = -1; i <= Nsize[0]; ++i) {
-    //     for (int j = -1; j <= Nsize[1]; ++j) {
-    //         for (int k = -1; k <= Nsize[2]; ++k) {
-    //             block(i,j,k) = phi(
-    //                 (i+Nmin[0])*h[0], (j+Nmin[1])*h[1], (k+Nmin[2])*h[2]
-    //             );
-    //         }
-    //     }
-    // }
 }
 
 
@@ -311,13 +303,60 @@ double Solver::laplacian(const Mat3D &block, int i, int j, int k) const {
 
 void Solver::fillU1(const Mat3D &block0, Mat3D &block1) {
     cudaSolver.fillU1(block0, block1, *stream1);
+    copySlicesToCPU(block1);
     block1.toCPU();
 }
 
 
 void Solver::step(const Mat3D &block0, const Mat3D &block1, Mat3D &block2) {
     cudaSolver.step(block0, block1, block2, *stream1);
+    copySlicesToCPU(block2);
     block2.toCPU();
+}
+
+void Solver::sliceToCPU(int dim, int i) {
+    SAFE_CALL(cudaMemcpyAsync(
+                out_slices[dim][i].data(),
+                gpu_slices[dim][i].data(),
+                sizeof(double)*gpu_slices[dim][i].size(),
+                cudaMemcpyDeviceToHost, *stream1))
+    
+    slice_is_on_host[dim][i].record(*stream1);
+}
+
+
+void Solver::copySlicesToCPU(Mat3D &block) {
+    //extract slices frim block
+    for (int dim = 0; dim < 3; ++dim) {
+        if (!periodic[dim]) {
+            if (_coord[dim] != 0) {
+                cudaSolver.getSlice(block, gpu_slices[dim][0], 0,            dim, *stream1);
+            }
+            if (_coord[dim] != procShape[dim]) {
+                cudaSolver.getSlice(block, gpu_slices[dim][1], Nsize[dim]-1, dim, *stream1);
+            }
+        } else {
+            cudaSolver.getSlice(block, gpu_slices[dim][0], 0,            dim, *stream1);
+            cudaSolver.getSlice(block, gpu_slices[dim][1], Nsize[dim]-1, dim, *stream1);
+        }
+    }
+
+    ready_for_reduce.record(*stream1);
+
+    //copy slices to cpu and record events
+    for (int dim = 0; dim < 3; ++dim) {
+        if (!periodic[dim]) {
+            if (_coord[dim] != 0) {
+                sliceToCPU(dim, 0);
+            }
+            if (_coord[dim] != procShape[dim]) {
+                sliceToCPU(dim, 1);
+            }
+        } else {
+            sliceToCPU(dim, 0);
+            sliceToCPU(dim, 1);
+        }
+    }
 }
 
 

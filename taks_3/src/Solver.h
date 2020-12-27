@@ -5,6 +5,7 @@
 #include "Mat3D.h"
 #include "cuda_utils/CudaVec.h"
 #include "cuda_utils/Stream.h"
+#include "cuda_utils/Event.h"
 #include "CudaSolver.h"
 #include "mpi.h"
 
@@ -43,11 +44,14 @@ private:
 	F3D_f4 phi;
 
 	Stream stream1, stream2;
+	Event ready_for_reduce;
+
 
 	Mat3D *blocks[3];
 	HostVec out_slices[3][2];
 	HostVec in_slices[3][2];
 	DeviceVec gpu_slices[3][2];
+	Event slice_is_on_host[3][2];
 
 	std::vector<double> errors;
 	void calcBlockSize();
@@ -61,6 +65,8 @@ private:
 	void clearRequests();
 	void initTags();
 	void waitSend();
+	void sliceToCPU(int dim, int i);
+	void copySlicesToCPU(Mat3D &block);
 	void updateBorders(Mat3D& block);
 	void setZeroSlices(Mat3D &block);
 	void sendBorders(Mat3D& block);

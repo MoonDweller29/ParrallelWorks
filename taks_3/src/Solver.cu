@@ -374,6 +374,7 @@ void Solver::copySlicesToBlock(Mat3D &block) {
 void Solver::run(int K) {
     this->K = K;
 
+    // cudaDeviceSynchronize();
     fillU0(*(blocks[0]), phi);
     cudaSolver.reduceErr(*(blocks[0]), 0, stream2, ready_for_reduce);
     updateBorders(*(blocks[0]));
@@ -387,8 +388,8 @@ void Solver::run(int K) {
 
     for (int n = 2; n <= K; ++n) {
         step(*(blocks[0]), *(blocks[1]), *(blocks[2]));
-        updateBorders(*(blocks[2]));
         cudaSolver.reduceErr(*(blocks[2]), tau*n, stream2, ready_for_reduce);
+        updateBorders(*(blocks[2]));
         printErr(tau*n);
         rotateBlocks();
     }

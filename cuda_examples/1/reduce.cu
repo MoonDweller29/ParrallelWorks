@@ -13,7 +13,7 @@ __global__ void fast_max_reduce(float *arr, float *out_arr) {
 	extern __shared__ float sdata[];
 
     int tid = threadIdx.x;
-    unsigned int i = blockIdx.x*blockDim.x + threadIdx.x;
+    unsigned int i = blockIdx.x*(blockDim.x*2) + threadIdx.x;
 
     sdata[tid] = fmax(arr[i], arr[i+blockDim.x]);
     __syncthreads();

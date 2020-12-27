@@ -2,6 +2,7 @@
 #include "Mat3D.h"
 #include "cuda_utils/CudaVec.h"
 #include "cuda_utils/Stream.h"
+#include "cuda_utils/Event.h"
 
 class CudaSolver
 {
@@ -17,7 +18,7 @@ public:
 	void fillU0(Mat3D &block, cudaStream_t stream);
 	void fillU1(const Mat3D &block0, Mat3D &block1, cudaStream_t stream);
 	void step(const Mat3D &block0, const Mat3D &block1, Mat3D &block2, cudaStream_t stream);
-	void reduceErr(const Mat3D &block, double u_t, cudaStream_t stream, int rank);
+	void reduceErr(const Mat3D &block, double u_t, Stream &stream, const Event& wait_event);
 	double getErr();
 
 	void setZeroSlice(Mat3D &block, int ind, int axis, cudaStream_t stream);

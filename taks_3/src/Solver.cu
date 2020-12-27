@@ -181,18 +181,16 @@ void Solver::sendBorders(Mat3D& block) {
 
     for (int axis = 0; axis < 3; ++axis) {
         if (periodic[axis] && (procShape[axis] == 1)) {
-            block.slice(0, axis, out_slices[axis][0]);
-            block.slice(Nsize[axis]-1, axis, out_slices[axis][1]);
-            block.setSlice(-1, axis, out_slices[axis][1]);
-            block.setSlice(Nsize[axis], axis, out_slices[axis][0]);
+            stream1.wait(slice_is_on_host[axis][1]);
+            sliceToGPU(axis, 0, out_slices[axis][1]);
+            stream1.wait(slice_is_on_host[axis][0]);
+            sliceToGPU(axis, 1, out_slices[axis][0]);
             continue;
         }
         
-        if (_coord[axis] == 0 && !periodic[axis]) {
-            block.setZeroSlice(-1, axis);
-            block.setZeroSlice(0, axis);
-        } else {
-            block.slice(0, axis, out_slices[axis][0]);
+        if ( !(_coord[axis] == 0 && !periodic[axis]) ) {
+            stream1.wait(slice_is_on_host[axis][0]);
+
             int recv_coord[3] = {_coord[0], _coord[1], _coord[2]};
             recv_coord[axis] -= 1;
             int recv_rank = procId(recv_coord);
@@ -202,11 +200,9 @@ void Solver::sendBorders(Mat3D& block) {
             );
         }
 
-        if (_coord[axis] == (procShape[axis] -1) && !periodic[axis]) {
-            block.setZeroSlice(Nsize[axis], axis);
-        }
-        else {
-            block.slice(Nsize[axis]-1, axis, out_slices[axis][1]);
+        if ( !(_coord[axis] == (procShape[axis] -1) && !periodic[axis]) ) {
+            stream1.wait(slice_is_on_host[axis][1]);
+            
             int recv_coord[3] = {_coord[0], _coord[1], _coord[2]};
             recv_coord[axis] += 1;
             int recv_rank = procId(recv_coord);
@@ -235,7 +231,7 @@ void Solver::recvBorders(Mat3D& block) {
                 sender_rank, sender_tags[axis][0],
                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-            block.setSlice(Nsize[axis], axis, in_slices[axis][1]);
+            sliceToGPU(axis, 1, in_slices[axis][1]);
         }
 
         
@@ -248,7 +244,7 @@ void Solver::recvBorders(Mat3D& block) {
                 sender_rank, sender_tags[axis][1],
                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-            block.setSlice(-1, axis, in_slices[axis][0]);
+            sliceToGPU(axis, 0, in_slices[axis][0]);
         }
     }
 }
@@ -256,31 +252,21 @@ void Solver::recvBorders(Mat3D& block) {
 void Solver::updateBorders(Mat3D& block) {
     sendBorders(block);
     recvBorders(block);
+    copySlicesToBlock(block);
 }
 
 
 void Solver::fillU0(Mat3D &block, const IFunction3D &phi) {
     cudaSolver.fillU0(block, *stream1);
+    setZeroSlices(block);
     copySlicesToCPU(block);
-    block.toCPU();
+    stream1.synchronize();
 }
 
 
-void Solver::printErr(Mat3D &block, const IFunction4D &u, double t) {
-    double err_max = -1;
-    #pragma omp parallel for reduction(max : err_max)
-    for (int i = 0; i < Nsize[0]; ++i) {
-        for (int j = 0; j < Nsize[1]; ++j) {
-            for (int k = 0; k < Nsize[2]; ++k) {
-                double curr_err = std::abs(
-                    u((i+Nmin[0])*h[0], (j+Nmin[1])*h[1], (k+Nmin[2])*h[2], t) - block(i,j,k)
-                );
-                if (curr_err > err_max) {
-                    err_max = curr_err;
-                }
-            }
-        }
-    }
+void Solver::printErr(double t) {
+    stream2.synchronize();
+    double err_max = cudaSolver.getErr();
 
     double out_max;
     MPI_Reduce(&err_max, &out_max, 1, MPI_DOUBLE, MPI_MAX, _root, MPI_COMM_WORLD);
@@ -303,15 +289,18 @@ double Solver::laplacian(const Mat3D &block, int i, int j, int k) const {
 
 void Solver::fillU1(const Mat3D &block0, Mat3D &block1) {
     cudaSolver.fillU1(block0, block1, *stream1);
+    setZeroSlices(block1);
     copySlicesToCPU(block1);
-    block1.toCPU();
+    stream1.synchronize();
 }
 
 
 void Solver::step(const Mat3D &block0, const Mat3D &block1, Mat3D &block2) {
     cudaSolver.step(block0, block1, block2, *stream1);
+    setZeroSlices(block2);
     copySlicesToCPU(block2);
-    block2.toCPU();
+    stream1.synchronize();
+    
 }
 
 void Solver::sliceToCPU(int dim, int i) {
@@ -324,6 +313,14 @@ void Solver::sliceToCPU(int dim, int i) {
     slice_is_on_host[dim][i].record(*stream1);
 }
 
+void Solver::sliceToGPU(int dim, int i, HostVec &slice) {
+    SAFE_CALL(cudaMemcpyAsync(
+                gpu_slices[dim][i].data(),
+                slice.data(),
+                sizeof(double)*gpu_slices[dim][i].size(),
+                cudaMemcpyHostToDevice, *stream1))
+}
+
 
 void Solver::copySlicesToCPU(Mat3D &block) {
     //extract slices frim block
@@ -332,7 +329,7 @@ void Solver::copySlicesToCPU(Mat3D &block) {
             if (_coord[dim] != 0) {
                 cudaSolver.getSlice(block, gpu_slices[dim][0], 0,            dim, *stream1);
             }
-            if (_coord[dim] != procShape[dim]) {
+            if (_coord[dim] != (procShape[dim] - 1)) {
                 cudaSolver.getSlice(block, gpu_slices[dim][1], Nsize[dim]-1, dim, *stream1);
             }
         } else {
@@ -349,7 +346,7 @@ void Solver::copySlicesToCPU(Mat3D &block) {
             if (_coord[dim] != 0) {
                 sliceToCPU(dim, 0);
             }
-            if (_coord[dim] != procShape[dim]) {
+            if (_coord[dim] != (procShape[dim] - 1)) {
                 sliceToCPU(dim, 1);
             }
         } else {
@@ -360,32 +357,43 @@ void Solver::copySlicesToCPU(Mat3D &block) {
 }
 
 
+void Solver::copySlicesToBlock(Mat3D &block) {
+    for (int dim = 0; dim < 3; ++dim) {
+        if (!periodic[dim]) {
+            if (_coord[dim] != 0) {
+                cudaSolver.setSlice(block, gpu_slices[dim][0], -1,         dim, *stream1);
+            }
+            if (_coord[dim] != (procShape[dim] - 1)) {
+                cudaSolver.setSlice(block, gpu_slices[dim][1], Nsize[dim], dim, *stream1);
+            }
+        } else {
+            cudaSolver.setSlice(block, gpu_slices[dim][0], -1,         dim, *stream1);
+            cudaSolver.setSlice(block, gpu_slices[dim][1], Nsize[dim], dim, *stream1);
+        }
+    }
+}
+
+
 
 void Solver::run(int K) {
     this->K = K;
 
     fillU0(*(blocks[0]), phi);
+    cudaSolver.reduceErr(*(blocks[0]), 0, stream2, ready_for_reduce);
     updateBorders(*(blocks[0]));
-    printErr(*(blocks[0]), u, 0);
-    blocks[0]->toGPU();
+    printErr(0);
+
     fillU1(*(blocks[0]), *(blocks[1]));
+    cudaSolver.reduceErr(*(blocks[1]), tau, stream2, ready_for_reduce);
     updateBorders(*(blocks[1]));
-    printErr(*(blocks[1]), u, tau);
-    blocks[1]->toGPU();
+    printErr(tau);
 
 
     for (int n = 2; n <= K; ++n) {
         step(*(blocks[0]), *(blocks[1]), *(blocks[2]));
         updateBorders(*(blocks[2]));
-        blocks[2]->toGPU();
-        setZeroSlices(*(blocks[2]));
-        stream1.synchronize();
-        printErr(*(blocks[2]), u, tau*n);
-        cudaSolver.reduceErr(*(blocks[2]), tau*n, *stream2, rank);
-        stream2.synchronize();
-        if (rank == 0) {
-            std::cout << "GPU_ERR = " << cudaSolver.getErr() << std::endl;
-        }
+        cudaSolver.reduceErr(*(blocks[2]), tau*n, stream2, ready_for_reduce);
+        printErr(tau*n);
         rotateBlocks();
     }
 
@@ -414,7 +422,7 @@ void Solver::allocSlices() {
                 in_slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
                 gpu_slices[dim][0].malloc(blocks[0]->sliceLen(dim));
             }
-            if (_coord[dim] != procShape[dim]) {
+            if (_coord[dim] != (procShape[dim] - 1)) {
                 out_slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
                 in_slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
                 gpu_slices[dim][1].malloc(blocks[0]->sliceLen(dim));

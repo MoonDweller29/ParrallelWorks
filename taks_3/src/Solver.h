@@ -66,14 +66,17 @@ private:
 	void initTags();
 	void waitSend();
 	void sliceToCPU(int dim, int i);
+	void sliceToGPU(int dim, int i, HostVec &slice);
+
 	void copySlicesToCPU(Mat3D &block);
+	void copySlicesToBlock(Mat3D &block);
 	void updateBorders(Mat3D& block);
 	void setZeroSlices(Mat3D &block);
 	void sendBorders(Mat3D& block);
 	void recvBorders(Mat3D& block);
 
 	void fillU0(Mat3D &block, const IFunction3D &phi);
-	void printErr(Mat3D &block, const IFunction4D &u, double t);
+	void printErr(double t);
 	double laplacian(const Mat3D &block, int i, int j, int k) const;
 	void fillU1(const Mat3D &block0, Mat3D &block1);
 	void step(const Mat3D &block0, const Mat3D &block1, Mat3D &block2);

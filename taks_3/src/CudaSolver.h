@@ -19,6 +19,8 @@ public:
 	void step(const Mat3D &block0, const Mat3D &block1, Mat3D &block2, cudaStream_t stream);
 	void reduceErr(const Mat3D &block, double u_t, cudaStream_t stream, int rank);
 	double getErr();
+
+	void setZeroSlice(Mat3D &block, int ind, int axis, cudaStream_t stream);
 private:
 	double _L[3];
 	double _h[3];

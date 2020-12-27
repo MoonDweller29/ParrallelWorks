@@ -137,6 +137,16 @@ __global__ void max_reduce(double *arr, double *out_arr) {
     }
 }
 
+__global__ void set_zero_slice(double *block, int ind, int axis) {
+    int coord[3];
+    coord[axis] = ind;
+    coord[(axis+1) % 3] = blockIdx.x;
+    coord[(axis+2) % 3] = threadIdx.x;
+    int raw_ind = rawInd(coord[0], coord[1], coord[2]);
+
+    block[raw_ind] = 0;
+}
+
 static int round_up_to_next_pow2(unsigned int x) {
     x--;
     x |= x >> 1;
@@ -261,4 +271,14 @@ void CudaSolver::reduceErr(const Mat3D &block, double u_t, cudaStream_t stream, 
 
 double CudaSolver::getErr() {
     return reduce_res.data()[0];
+}
+
+void CudaSolver::setZeroSlice(Mat3D &block, int ind, int axis, cudaStream_t stream) {
+    if(axis < 0 || axis > 2) {
+        std::cerr << "wrong axis " << axis << std::endl;
+    }
+
+    dim3 gridSize = dim3(Nsize[(axis+1)%3], 1, 1);
+    dim3 blockSize = dim3(Nsize[(axis+2)%3], 1, 1);
+    set_zero_slice<<<gridSize, blockSize, 0, stream>>>(block.device(), ind, axis);
 }

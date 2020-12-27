@@ -47,6 +47,7 @@ private:
 	Mat3D *blocks[3];
 	HostVec out_slices[3][2];
 	HostVec in_slices[3][2];
+	DeviceVec gpu_slices[3][2];
 
 	std::vector<double> errors;
 	void calcBlockSize();
@@ -61,6 +62,7 @@ private:
 	void initTags();
 	void waitSend();
 	void updateBorders(Mat3D& block);
+	void setZeroSlices(Mat3D &block);
 	void sendBorders(Mat3D& block);
 	void recvBorders(Mat3D& block);
 

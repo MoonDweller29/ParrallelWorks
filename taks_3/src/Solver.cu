@@ -160,6 +160,20 @@ void Solver::waitSend() {
     }
 }
 
+void Solver::setZeroSlices(Mat3D &block) {
+    for (int axis = 0; axis < 3; ++axis) {
+        if(!periodic[axis]) {
+            if (_coord[axis] == 0) {
+                cudaSolver.setZeroSlice(block, -1, axis, *stream1);
+                cudaSolver.setZeroSlice(block, 0, axis, *stream1);
+            }
+            if (_coord[axis] == (procShape[axis] - 1)) {
+                cudaSolver.setZeroSlice(block, Nsize[axis], axis, *stream1);
+            }
+        }
+    }
+}
+
 
 void Solver::sendBorders(Mat3D& block) {
     waitSend();
@@ -325,6 +339,8 @@ void Solver::run(int K) {
         step(*(blocks[0]), *(blocks[1]), *(blocks[2]));
         updateBorders(*(blocks[2]));
         blocks[2]->toGPU();
+        setZeroSlices(*(blocks[2]));
+        stream1.synchronize();
         printErr(*(blocks[2]), u, tau*n);
         cudaSolver.reduceErr(*(blocks[2]), tau*n, *stream2, rank);
         stream2.synchronize();
@@ -357,16 +373,20 @@ void Solver::allocSlices() {
             if (_coord[dim] != 0) {
                 out_slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
                 in_slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
+                gpu_slices[dim][0].malloc(blocks[0]->sliceLen(dim));
             }
             if (_coord[dim] != procShape[dim]) {
                 out_slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
                 in_slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
+                gpu_slices[dim][1].malloc(blocks[0]->sliceLen(dim));
             }
         } else {
             out_slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
             out_slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
             in_slices[dim][0].malloc(blocks[0]->sliceLen(dim), true);
             in_slices[dim][1].malloc(blocks[0]->sliceLen(dim), true);
+            gpu_slices[dim][0].malloc(blocks[0]->sliceLen(dim));
+            gpu_slices[dim][1].malloc(blocks[0]->sliceLen(dim));
         }
     }
 }
